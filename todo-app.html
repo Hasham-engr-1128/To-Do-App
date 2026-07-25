@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Daybook — Task Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2430;
+    --ink-soft:#3A4656;
+    --paper:#FAF7F0;
+    --paper-dim:#F1ECE1;
+    --line:#DCD5C4;
+    --amber:#E8A33D;
+    --amber-deep:#C7822A;
+    --teal:#3F9E92;
+    --danger:#C1554A;
+    --shadow: 0 1px 2px rgba(27,36,48,0.06), 0 8px 24px rgba(27,36,48,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper-dim);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(27,36,48,0.05) 1px, transparent 1px);
+    background-size:22px 22px;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:48px 20px;
+  }
+  .app{
+    width:100%;
+    max-width:640px;
+  }
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:6px;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-optical-sizing:auto;
+    font-weight:600;
+    font-size:2.4rem;
+    letter-spacing:-0.01em;
+    margin:0;
+  }
+  .date{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    letter-spacing:0.03em;
+  }
+  .tagline{
+    color:var(--ink-soft);
+    font-size:0.95rem;
+    margin:0 0 28px;
+  }
+
+  /* Add task ticket */
+  .composer{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    box-shadow:var(--shadow);
+    padding:14px 14px 14px 18px;
+    display:flex;
+    gap:10px;
+    margin-bottom:28px;
+    position:relative;
+  }
+  .composer::before{
+    content:"";
+    position:absolute;
+    left:0; top:10px; bottom:10px;
+    width:3px;
+    border-radius:2px;
+    background:var(--amber);
+  }
+  .composer input[type=text]{
+    flex:1;
+    border:none;
+    outline:none;
+    background:transparent;
+    font-family:'Inter',sans-serif;
+    font-size:1rem;
+    color:var(--ink);
+  }
+  .composer input[type=text]::placeholder{color:#9CA3AE;}
+  select.priority{
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    color:var(--ink-soft);
+    padding:0 8px;
+  }
+  .add-btn{
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:6px;
+    padding:0 18px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:0.9rem;
+    cursor:pointer;
+    transition:background 0.15s ease;
+  }
+  .add-btn:hover{background:var(--ink-soft);}
+
+  /* Filter / stats bar */
+  .statbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .filters{
+    display:flex;
+    gap:4px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:3px;
+  }
+  .filters button{
+    border:none;
+    background:transparent;
+    padding:6px 14px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .filters button.active{
+    background:var(--ink);
+    color:var(--paper);
+  }
+  .count{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.75rem;
+    color:var(--ink-soft);
+  }
+
+  /* Task list = ticket stubs */
+  .list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .ticket{
+    display:flex;
+    align-items:stretch;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    transition:opacity 0.4s ease, transform 0.4s ease;
+  }
+  .ticket.removing{
+    opacity:0;
+    transform:translateX(12px) scale(0.98);
+  }
+  .stub{
+    width:52px;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--paper-dim);
+    border-right:2px dashed var(--line);
+    cursor:pointer;
+    position:relative;
+  }
+  .check{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    border:2px solid var(--ink-soft);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:all 0.2s ease;
+  }
+  .ticket.done .stub{background:var(--teal);border-right-color:var(--teal);}
+  .ticket.done .check{border-color:var(--paper);background:var(--paper);}
+  .check svg{width:12px;height:12px;opacity:0;transition:opacity 0.15s ease;}
+  .ticket.done .check svg{opacity:1;}
+
+  .body{
+    flex:1;
+    padding:12px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    min-width:0;
+  }
+  .title-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .task-title{
+    font-size:0.98rem;
+    font-weight:500;
+    color:var(--ink);
+    word-break:break-word;
+  }
+  .ticket.done .task-title{
+    color:#9CA3AE;
+    text-decoration:line-through;
+    text-decoration-color:#C9C2B0;
+  }
+  .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.62rem;
+    letter-spacing:0.04em;
+    padding:1px 7px;
+    border-radius:20px;
+    text-transform:uppercase;
+    flex-shrink:0;
+  }
+  .tag.high{background:rgba(193,85,74,0.12);color:var(--danger);}
+  .tag.medium{background:rgba(232,163,61,0.14);color:var(--amber-deep);}
+  .tag.low{background:rgba(63,158,146,0.12);color:var(--teal);}
+  .meta{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem;
+    color:#A39C8A;
+  }
+  .del{
+    align-self:center;
+    margin-right:14px;
+    background:none;
+    border:none;
+    color:#C9C2B0;
+    cursor:pointer;
+    font-size:1rem;
+    padding:4px;
+    line-height:1;
+    transition:color 0.15s ease;
+  }
+  .del:hover{color:var(--danger);}
+
+  .empty{
+    text-align:center;
+    padding:50px 20px;
+    color:#A39C8A;
+  }
+  .empty .stamp{
+    font-family:'Fraunces',serif;
+    font-size:1.2rem;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+
+  footer{
+    margin-top:28px;
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem;
+    color:#B4AD9C;
+  }
+
+  @media (max-width:480px){
+    h1{font-size:1.9rem;}
+    .composer{flex-wrap:wrap;}
+    select.priority{order:3; width:100%; height:30px; margin-top:6px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>Daybook</h1>
+    <div class="date" id="dateLabel"></div>
+  </header>
+  <p class="tagline">Punch your tasks in. Tear them off when done.</p>
+
+  <div class="composer">
+    <input type="text" id="taskInput" placeholder="What needs doing today?" maxlength="120" autofocus>
+    <select class="priority" id="prioritySelect">
+      <option value="low">Low</option>
+      <option value="medium" selected>Medium</option>
+      <option value="high">High</option>
+    </select>
+    <button class="add-btn" id="addBtn">Add</button>
+  </div>
+
+  <div class="statbar">
+    <div class="filters" id="filters">
+      <button data-filter="all" class="active">All</button>
+      <button data-filter="active">Active</button>
+      <button data-filter="done">Done</button>
+    </div>
+    <div class="count" id="countLabel">0 open</div>
+  </div>
+
+  <div class="list" id="list"></div>
+  <div class="empty" id="emptyState" style="display:none;">
+    <div class="stamp">— nothing here yet —</div>
+    <div>Add your first task above.</div>
+  </div>
+
+  <footer>Tasks live in this session only · nothing is sent anywhere</footer>
+</div>
+
+<script>
+  let tasks = [];
+  let idCounter = 1;
+  let currentFilter = 'all';
+
+  const list = document.getElementById('list');
+  const emptyState = document.getElementById('emptyState');
+  const countLabel = document.getElementById('countLabel');
+  const taskInput = document.getElementById('taskInput');
+  const prioritySelect = document.getElementById('prioritySelect');
+  const addBtn = document.getElementById('addBtn');
+  const filters = document.getElementById('filters');
+
+  document.getElementById('dateLabel').textContent = new Date().toLocaleDateString('en-US', {
+    weekday:'short', month:'short', day:'numeric'
+  });
+
+  function addTask(){
+    const text = taskInput.value.trim();
+    if(!text) return;
+    tasks.unshift({
+      id: idCounter++,
+      text,
+      priority: prioritySelect.value,
+      done: false,
+      time: new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
+    });
+    taskInput.value = '';
+    render();
+    taskInput.focus();
+  }
+
+  function toggleTask(id){
+    const t = tasks.find(t => t.id === id);
+    if(t) t.done = !t.done;
+    render();
+  }
+
+  function deleteTask(id){
+    const el = document.querySelector(`[data-id="${id}"]`);
+    if(el){
+      el.classList.add('removing');
+      setTimeout(()=>{
+        tasks = tasks.filter(t => t.id !== id);
+        render();
+      }, 300);
+    }
+  }
+
+  function render(){
+    const filtered = tasks.filter(t=>{
+      if(currentFilter === 'active') return !t.done;
+      if(currentFilter === 'done') return t.done;
+      return true;
+    });
+
+    list.innerHTML = '';
+    filtered.forEach(t=>{
+      const div = document.createElement('div');
+      div.className = 'ticket' + (t.done ? ' done' : '');
+      div.setAttribute('data-id', t.id);
+      div.innerHTML = `
+        <div class="stub" onclick="toggleTask(${t.id})">
+          <div class="check">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div class="body">
+          <div class="title-row">
+            <span class="task-title">${escapeHtml(t.text)}</span>
+            <span class="tag ${t.priority}">${t.priority}</span>
+          </div>
+          <span class="meta">added ${t.time}</span>
+        </div>
+        <button class="del" onclick="deleteTask(${t.id})" aria-label="Delete task">✕</button>
+      `;
+      list.appendChild(div);
+    });
+
+    emptyState.style.display = filtered.length ? 'none' : 'block';
+    const openCount = tasks.filter(t=>!t.done).length;
+    countLabel.textContent = `${openCount} open · ${tasks.length} total`;
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  addBtn.addEventListener('click', addTask);
+  taskInput.addEventListener('keydown', e=>{ if(e.key === 'Enter') addTask(); });
+
+  filters.addEventListener('click', e=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    filters.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
